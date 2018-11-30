@@ -1,0 +1,8 @@
+.Rproj.user
+*.Rproj
+*.RData
+*.Rhistory
+*.Rapp.history
+*.Rout
+*.Rcheck/
+.Rproj.user
