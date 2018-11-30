@@ -1,0 +1,34 @@
+Package: snaWeb
+Type: Package
+Title: Internet-based Social Network Analysis
+Description: Internet-based Social Network Analysis.
+Version: 0.8.1
+Authors@R: c(
+    person("Kristen", "Hychka",   email = "who@where.org",            role = c("ctb")),
+    person("Betty",   "Kreakie",  email = "who@where.org",            role = c("ctb")),
+    person("Peter",   "DeWitt",   email = "pdewitt@neptuneinc.org",   role = c("aut", "cre")),
+    person("Tom",     "Stockton", email = "tstockton@neptuneinc.org", role = c("aut"))
+    )
+License: GPL (>=2)
+Imports:
+    dplyr (>= 0.7.0),
+    igraph,
+    jsonlite,
+    magrittr,
+    pbapply,
+    R.utils,
+    rlang,
+    rvest,
+    urltools,
+    xml2,
+    httr
+VignetteBuilder: knitr
+Suggests:
+    BiocStyle,
+    knitr,
+    rmarkdown,
+    devtools,
+    testthat,
+    networkD3
+Encoding: UTF-8
+RoxygenNote: 6.1.1
