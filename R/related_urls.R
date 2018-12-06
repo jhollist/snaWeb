@@ -198,7 +198,7 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
   }
   if( !(nchar(pg_title)>0) | is.na(pg_title) ) pg_title <- urltools::domain(site)
   if( !(nchar(pg_title)>0) ) pg_title <- site
-  
+  pg_title <- gsub("http://|https://","",pg_title)
   cat(pg_title,"\n")
   # if(grepl("Posts tagged",pg_title)) browser()
   
