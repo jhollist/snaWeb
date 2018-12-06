@@ -97,7 +97,9 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
     } 
   } # end while loop
   
-  related_sites <- related_sites[seq(1, min(length(related_sites), maxurls), by = 1)]
+  if( length(related_sites)!=0 ){
+    related_sites <- related_sites[seq(1, min(length(related_sites), maxurls), by = 1)]
+  }
   
   # generate the nodes data.frame
   nodes <-
