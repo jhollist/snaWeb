@@ -97,12 +97,7 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
     } 
   } # end while loop
   
-  if(length(related_sites)!=0){
-    related_sites <- try(related_sites[seq(1, min(length(related_sites), maxurls), by = 1)])
-    if( inherits(related_sites,"try-error")) browser()
-  }else{
-    related_sites <- NULL
-  }
+  related_sites <- related_sites[seq(1, min(length(related_sites), maxurls), by = 1)]
   
   # generate the nodes data.frame
   nodes <-
@@ -112,22 +107,10 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
     dplyr::mutate(id = seq_along(.data$url)) %>%
     dplyr::mutate(rooturl = urltools::domain(.data$url))
   
-  if(length(related_sites)!=0){
-    nodes$name <- lapply(nodes$url, get_page_title) %>% do.call(c, .)
-    nodes$specification <-
-      with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
-      dplyr::data_frame(name_from = urltools::domain(x),
-                        name_to   = urltools::domain(related_sites))
-    edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
-  }else{
-    nodes$name <- urltools::domain(nodes$url)
-    nodes$specification <-
-      with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
-    edges <- NULL
-    #   dplyr::data_frame(name_from = urltools::domain(x),
-    #                     name_to   = urltools::domain(related_sites))
-    # edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}',1)
-  }
+  nodes$name <- lapply(nodes$url, get_page_title) %>% do.call(c, .)
+  nodes$specification <-
+    with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
+  
   # build the data frame to define the edges of the social network graph.
   # edges <-
   #   dplyr::data_frame(name_from = x,
@@ -142,6 +125,13 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
   #                    by = c("name_from" = "url")) %>%
   #   dplyr::mutate(rank = .data$node_to - .data$node_from)
   
+  edges <-
+    dplyr::data_frame(name_from = urltools::domain(x),
+                      name_to   = urltools::domain(related_sites))
+  # dplyr::mutate(predicate=sprintf('{"predicate":"is related","rank":"%d"}', row.names(.data)))
+  
+  edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
+  # with(edges, sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(tmp))))
   
   # return object
   out <-
@@ -159,36 +149,36 @@ google <- function(site, maxurls, delay, excludesites) {
   # maxurls.
   strt <- 0
   related_sites <- vector('character', length = 0)
-
+  
   while(length(related_sites) < maxurls) {
     # construct the google_query for related sites
     google_query <-
       sprintf("http://www.google.com/search?hl=en&lr=&ie=ISO-8859-1&q=related:%s&btnG=Search&ndplr=1&start=%d",
               site, strt)
-
+    
     this_url_set <- get_href_urls(google_query)
     this_url_set <- this_url_set[!grepl(paste0(excludesites,collapse="|"),this_url_set)]
     
     related_sites <- c(related_sites, this_url_set)
-
+    
     if (length(this_url_set) < 10L) {
       break
     } else {
       strt <- strt + 10
       Sys.sleep(delay)
     }
-
+    
   } # end while loop
-
+  
   related_sites[seq(1, maxurls, by = 1)]
 }
 
 get_page_title <- function(site, timeout = 10, onTimeout = "error") { 
   # THERE IS NO NEED FOR A TIMEOUT HERE... html_session can control timeout
-
-  pg <- try(R.utils::withTimeout(xml2::read_html(site), silent = TRUE,
-                             timeout = timeout, onTimeout = onTimeout))
-
+  
+  pg <- R.utils::withTimeout(try(xml2::read_html(site), silent = TRUE),
+                             timeout = timeout, onTimeout = onTimeout)
+  
   if (!inherits(pg, "try-error")) {
     pg_title <-
       pg %>%
@@ -200,18 +190,9 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
   } else {
     pg_title <- site
   }
-
-  if( is.na(pg_title) ) {
-    pg_title <- site
-  }else{
-    if( !(nchar(pg_title)>0) ) {
-      pg_title <- site
-    }else{
-      pg_title <- urltools::domain(site)
-    }
-  }
-  # if( !(nchar(pg_title)>0) ) pg_title <- site
-  # if(pg_title ==  "NA")browser()
+  if( !(nchar(pg_title)>0) | is.na(pg_title) ) pg_title <- urltools::domain(site)
+  if( !(nchar(pg_title)>0) ) pg_title <- site
+  
   cat(pg_title,"\n")
   # if(grepl("Posts tagged",pg_title)) browser()
   
@@ -224,14 +205,14 @@ get_href_urls <- function(site) {
                  deparse(substitute(site))),
          call. = FALSE)
   }
-
+  
   sites <-
     xml2::read_html(site) %>%
     rvest::html_nodes("a") %>%
     rvest::html_attr("href")
-
+  
   idx <-  grepl("^\\/url\\?q\\=", sites) &
-         !grepl("webcache.googleusercontent.co", sites)
-
+    !grepl("webcache.googleusercontent.co", sites)
+  
   gsub("\\/url\\?q=(.*)&sa.*$", "\\1", sites[idx])
 }
