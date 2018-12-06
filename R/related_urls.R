@@ -125,12 +125,16 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
   #                    by = c("name_from" = "url")) %>%
   #   dplyr::mutate(rank = .data$node_to - .data$node_from)
   
-  edges <-
-    dplyr::data_frame(name_from = urltools::domain(x),
-                      name_to   = urltools::domain(related_sites))
-  # dplyr::mutate(predicate=sprintf('{"predicate":"is related","rank":"%d"}', row.names(.data)))
-  
-  edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
+  if( length(related_sites) != 0 ){
+    edges <-
+      dplyr::data_frame(name_from = urltools::domain(x),
+                        name_to   = urltools::domain(related_sites))
+    # dplyr::mutate(predicate=sprintf('{"predicate":"is related","rank":"%d"}', row.names(.data)))
+    
+    edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
+  } else{
+    edges <- NULL
+  }
   # with(edges, sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(tmp))))
   
   # return object
