@@ -97,7 +97,12 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
     } 
   } # end while loop
   
-  related_sites <- related_sites[seq(1, min(length(related_sites), maxurls), by = 1)]
+  if(length(related_sites)!=0){
+    related_sites <- try(related_sites[seq(1, min(length(related_sites), maxurls), by = 1)])
+    if( inherits(related_sites,"try-error")) browser()
+  }else{
+    related_sites <- NULL
+  }
   
   # generate the nodes data.frame
   nodes <-
@@ -107,10 +112,22 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
     dplyr::mutate(id = seq_along(.data$url)) %>%
     dplyr::mutate(rooturl = urltools::domain(.data$url))
   
-  nodes$name <- lapply(nodes$url, get_page_title) %>% do.call(c, .)
-  nodes$specification <-
-    with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
-  
+  if(length(related_sites)!=0){
+    nodes$name <- lapply(nodes$url, get_page_title) %>% do.call(c, .)
+    nodes$specification <-
+      with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
+      dplyr::data_frame(name_from = urltools::domain(x),
+                        name_to   = urltools::domain(related_sites))
+    edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
+  }else{
+    nodes$name <- urltools::domain(nodes$url)
+    nodes$specification <-
+      with(nodes, sprintf('{"is_root":"%s","url":"%s","name":"%s"}', is_root, url, name))
+    edges <- NULL
+    #   dplyr::data_frame(name_from = urltools::domain(x),
+    #                     name_to   = urltools::domain(related_sites))
+    # edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}',1)
+  }
   # build the data frame to define the edges of the social network graph.
   # edges <-
   #   dplyr::data_frame(name_from = x,
@@ -125,13 +142,6 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
   #                    by = c("name_from" = "url")) %>%
   #   dplyr::mutate(rank = .data$node_to - .data$node_from)
   
-  edges <-
-    dplyr::data_frame(name_from = urltools::domain(x),
-                      name_to   = urltools::domain(related_sites))
-  # dplyr::mutate(predicate=sprintf('{"predicate":"is related","rank":"%d"}', row.names(.data)))
-  
-  edges$predicate <- sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(edges)))
-  # with(edges, sprintf('{"predicate":"is related","rank":"%d"}', as.integer(row.names(tmp))))
   
   # return object
   out <-
@@ -175,9 +185,9 @@ google <- function(site, maxurls, delay, excludesites) {
 
 get_page_title <- function(site, timeout = 10, onTimeout = "error") { 
   # THERE IS NO NEED FOR A TIMEOUT HERE... html_session can control timeout
-  
-  pg <- R.utils::withTimeout(try(xml2::read_html(site), silent = TRUE),
-                             timeout = timeout, onTimeout = onTimeout)
+
+  pg <- try(R.utils::withTimeout(xml2::read_html(site), silent = TRUE,
+                             timeout = timeout, onTimeout = onTimeout))
 
   if (!inherits(pg, "try-error")) {
     pg_title <-
@@ -185,14 +195,23 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
       rvest::html_nodes("title") %>%
       rvest::html_text() %>%
       magrittr::extract(1) %>%
-      gsub("\\'|\\r|\\n|\\s{2,}", "", .) %>%
+      gsub("\\'|\\t|\\r|\\n|\\s{2,}", "", .) %>%
       gsub('\\"', "", .)
   } else {
     pg_title <- site
   }
-  if( !(nchar(pg_title)>0) | is.na(pg_title) ) pg_title <- urltools::domain(site)
-  if( !(nchar(pg_title)>0) ) pg_title <- site
-  
+
+  if( is.na(pg_title) ) {
+    pg_title <- site
+  }else{
+    if( !(nchar(pg_title)>0) ) {
+      pg_title <- site
+    }else{
+      pg_title <- urltools::domain(site)
+    }
+  }
+  # if( !(nchar(pg_title)>0) ) pg_title <- site
+  # if(pg_title ==  "NA")browser()
   cat(pg_title,"\n")
   # if(grepl("Posts tagged",pg_title)) browser()
   
