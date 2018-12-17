@@ -1,7 +1,5 @@
 #' Build Network
 #'
-#' Function for building a network of sites and links.
-#'
 #' The buildNetwork function runs a Google 'related' search for the input sites
 #' or parses the site HTML for hyperlinked sites.
 #'
@@ -12,7 +10,8 @@
 #' @param edges a data frame. edges to append to new search to (default is NULL). 
 #' @param excludesites (default is \code{NULL})
 #' @param delay (default is 0)
-#' @param maxurls (default is 10)
+#' @param maxurls Maximum urls returned in a "related" search (default is 10)
+#' @param max_depth Maximum depth a "linked" search will scrape
 #'
 #' @return What does this return?
 #'
@@ -22,11 +21,11 @@
 #' @export
 buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE,
                          nodes = NULL, edges = NULL,
-                         excludesites = NULL, delay = 2, maxurls = 10) { 
+                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5) { 
   
   options(stringsAsFactors=F)
   #requireNamespace("dplyr");requireNamespace(magrittr);
-  if( !is.null(excludesites) )
+  if( excludesites != "none" )
     excludesites <- jsonlite::fromJSON(excludesites)
   sites <- jsonlite::fromJSON(sites)
   sites <- unlist(lapply(sites,function(site){if(!grepl("^http",site)) {paste0("http://",site)}else{site}}))
@@ -38,7 +37,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
     }else{
-      results <- try(linked_urls(x=site,max_depth = 2, excludesites = excludesites))
+      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Linked Error: site",site,"excludesites",jsonlite::toJSON(excludesites),results) )
     }
     # update the network with the latest site's results

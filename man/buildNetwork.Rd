@@ -5,8 +5,8 @@
 \title{Build Network}
 \usage{
 buildNetwork(sites = sites, searchtype = "related", snowball = FALSE,
-  nodes = NULL, edges = NULL, excludesites = NULL, delay = 2,
-  maxurls = 10)
+  nodes = NULL, edges = NULL, excludesites = "none", delay = 1,
+  maxurls = 10, max_depth = 5)
 }
 \arguments{
 \item{sites}{a vector. Web sites for the Goolge related search.}
@@ -23,15 +23,14 @@ buildNetwork(sites = sites, searchtype = "related", snowball = FALSE,
 
 \item{delay}{(default is 0)}
 
-\item{maxurls}{(default is 10)}
+\item{maxurls}{Maximum urls returned in a "related" search (default is 10)}
+
+\item{max_depth}{Maximum depth a "linked" search will scrape}
 }
 \value{
 What does this return?
 }
 \description{
-Function for building a network of sites and links.
-}
-\details{
 The buildNetwork function runs a Google 'related' search for the input sites
 or parses the site HTML for hyperlinked sites.
 }

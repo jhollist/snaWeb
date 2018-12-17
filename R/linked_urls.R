@@ -12,18 +12,17 @@
 #'
 #' @param x The root url as a character string, or a html session.
 #' @param delay number of seconds to delay between http requests.
-#' @param max_depth Starting with the root url (level 0) follow links upto
-#' @param excludesites (default is \code{NULL})
-#' \code{max_depth} "clicks".
+#' @param max_depth Starting with the root url (level 0) follow links upto \code{max_depth} "clicks".
+#' @param excludesites (default is "none"
 #' @param ... additional arguments (not yet used)
 #'
 #' @export
-linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites=NULL, ...) {
+linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) {
   UseMethod("linked_urls")
 }
 #' @export
-linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites=NULL, ...) {
-
+linked_urls.character <- function(x, delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+  
   if( grep("\\.",x)==1 & !grepl("www",x) ){
     x <- gsub("://","://www.",x)
   }
@@ -48,8 +47,7 @@ linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites=NU
 }
 
 #' @export
-linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites=NULL, ...) {
-
+linked_urls.session <- function(x, delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
   max_depth <- floor(max_depth)
   if (max_depth < 1L) {
@@ -69,6 +67,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites=NULL
 
   current_depth <- 1L
 
+  cat("max_depth:", max_depth,"\n")
   while (current_depth <= max_depth) {
 
     message(sprintf("current_depth: %d", current_depth))
@@ -80,12 +79,12 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites=NULL
       dplyr::bind_rows(.) %>%
       dplyr::distinct(.)
 
+    message(sprintf("%d urls to visit", nrow(links_to_visit)))
     if (nrow(links_to_visit) > 0) {
       links_to_visit %<>% dplyr::anti_join(., all_urls, by = "url")
     } else {
       break
     }
-    message(sprintf("%d urls to visit", nrow(links_to_visit)))
 
     if (nrow(links_to_visit) == 0) {
       break

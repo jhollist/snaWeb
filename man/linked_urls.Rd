@@ -4,17 +4,17 @@
 \alias{linked_urls}
 \title{Linked Sites}
 \usage{
-linked_urls(x, delay = 0.2, max_depth = 5, excludesites = NULL, ...)
+linked_urls(x, delay = 0.2, max_depth = 5, excludesites = "none",
+  ...)
 }
 \arguments{
 \item{x}{The root url as a character string, or a html session.}
 
 \item{delay}{number of seconds to delay between http requests.}
 
-\item{max_depth}{Starting with the root url (level 0) follow links upto}
+\item{max_depth}{Starting with the root url (level 0) follow links upto \code{max_depth} "clicks".}
 
-\item{excludesites}{(default is \code{NULL})
-\code{max_depth} "clicks".}
+\item{excludesites}{(default is "none"}
 
 \item{...}{additional arguments (not yet used)}
 }

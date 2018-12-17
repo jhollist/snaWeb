@@ -23,13 +23,14 @@ visit_url <- function(x, ...) {
 #' @export
 visit_url.session <- function(x, ...) {
   # visit_url(x$url, ...)
+  
   out <-
     dplyr::data_frame(url         = x$url,
                       status      = as.character(x$response$status_code),
                       access_date = x$response$date,
                       type        = x$response$headers$`content-type`)
 
-  title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% gsub("\\'|\\r|\\n|\\s{2,}", "", .), silent = TRUE)
+  title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% gsub('\\"','', .), silent = TRUE)
   out$title <- ifelse(inherits(title, "try-error"),  urltools::domain(out$url), title)
   # out$title <- ifelse(inherits(title, "try-error"), NA_character_, title)
   # if(!(nchar(out$title)>0)) out$title <- urltools::domain(out$url)
@@ -46,9 +47,8 @@ visit_url.character <- function(x, ...) {
     stop("length(x) > 1: you may only pass on url at a time to snaWeb::visit_url()", call. = FALSE)
   }
 
-  this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(1))),
+  this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(10))),
                       silent = TRUE)
-
 
   if (inherits(this_session, "try-error")) {
     out <-
