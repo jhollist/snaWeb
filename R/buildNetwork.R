@@ -8,7 +8,7 @@
 #' @param snowball a boolean. If TRUE snowball search results (default is FALSE). 
 #' @param nodes a data frame. nodes to append to new search to (default is NULL). 
 #' @param edges a data frame. edges to append to new search to (default is NULL). 
-#' @param excludesites (default is \code{NULL})
+#' @param excludesites (default is \code{none})
 #' @param delay (default is 0)
 #' @param maxurls Maximum urls returned in a "related" search (default is 10)
 #' @param max_depth Maximum depth a "linked" search will scrape
