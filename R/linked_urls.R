@@ -21,8 +21,8 @@ linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...)
   UseMethod("linked_urls")
 }
 #' @export
-linked_urls.character <- function(x, delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
-  
+linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+  requireNamespace("magrittr")
   if( grep("\\.",x)==1 & !grepl("www",x) ){
     x <- gsub("://","://www.",x)
   }
@@ -47,8 +47,9 @@ linked_urls.character <- function(x, delay = delay, max_depth = max_depth, exclu
 }
 
 #' @export
-linked_urls.session <- function(x, delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
+  requireNamespace("magrittr")
   max_depth <- floor(max_depth)
   if (max_depth < 1L) {
     warning("max_depth is being set to 1.", call. = FALSE, immediate. = TRUE)
@@ -62,7 +63,7 @@ linked_urls.session <- function(x, delay = delay, max_depth = max_depth, exclude
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
 
-  all_urls %<>% dplyr::mutate(hrefs = list(get_hrefs(url, omit_regex = "^mailto")))
+  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url, omit_regex = "^mailto|pdf$|jpg$")))
   all_urls$depth <- 0L
 
   current_depth <- 1L
@@ -98,7 +99,7 @@ linked_urls.session <- function(x, delay = delay, max_depth = max_depth, exclude
           cat("\n     ---",u)
           v <- try(visit_url(u))  ## Add error handle here?  Other regex to omit from get_href?
           if (r && v$status == 200) {
-            v$hrefs <- list(get_hrefs(attr(v, "session"), omit_regex = "^mailto"))
+            v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = "^mailto|pdf$|jpg$"))
           }
           cat(" success\n")
           Sys.sleep(delay)
@@ -124,7 +125,7 @@ linked_urls.session <- function(x, delay = delay, max_depth = max_depth, exclude
   nodes <-
     dplyr::data_frame(url = c(x$url, linked_sites$url),
                       rooturl = c(root_domain,linked_sites$rooturl),
-                      name = c(get_page_title(x$url),linked_sites$title),
+                      name = c(snaWeb::get_page_title(x$url),linked_sites$title),
                       is_root = c("TRUE", rep("FALSE", nrow(linked_sites)))
     ) 
     # %>% dplyr::mutate(id = seq_along(.data$url))

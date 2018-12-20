@@ -9,7 +9,7 @@ buildNetwork(sites = sites, searchtype = "related", snowball = FALSE,
   maxurls = 10, max_depth = 5)
 }
 \arguments{
-\item{sites}{a vector. Web sites for the Goolge related search.}
+\item{sites}{is a vector or json of web sites for the search.}
 
 \item{searchtype}{a vector. Type of links search. 'related','links' or 'both' (default is 'related').}
 
@@ -19,7 +19,7 @@ buildNetwork(sites = sites, searchtype = "related", snowball = FALSE,
 
 \item{edges}{a data frame. edges to append to new search to (default is NULL).}
 
-\item{excludesites}{(default is \code{NULL})}
+\item{excludesites}{is a vector or json of web sites to be excluded from the search (default is \code{none})}
 
 \item{delay}{(default is 0)}
 
