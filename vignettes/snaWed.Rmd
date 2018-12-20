@@ -21,7 +21,7 @@ library(snaWeb);
 ## Organizational Network Analysis
 
 ```{r network}
-onaNetwork <- snaWeb::buildNetwork(sites='["www.saylesunchartedwaters.com"]',searchtype = "linked")
+onaNetwork <- snaWeb::buildNetwork(sites='["www.johnpatrickconnors.com"]',searchtype = "linked")
 onaNetwork <- snaWeb:::graphMetrics(onaNetwork)
 ```
 

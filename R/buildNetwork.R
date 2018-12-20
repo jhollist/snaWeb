@@ -3,12 +3,12 @@
 #' The buildNetwork function runs a Google 'related' search for the input sites
 #' or parses the site HTML for hyperlinked sites.
 #'
-#' @param sites a vector. Web sites for the Goolge related search. 
+#' @param sites is a vector or json of web sites for the search. 
 #' @param searchtype a vector. Type of links search. 'related','links' or 'both' (default is 'related'). 
 #' @param snowball a boolean. If TRUE snowball search results (default is FALSE). 
 #' @param nodes a data frame. nodes to append to new search to (default is NULL). 
 #' @param edges a data frame. edges to append to new search to (default is NULL). 
-#' @param excludesites (default is \code{none})
+#' @param excludesites is a vector or json of web sites to be excluded from the search (default is \code{none})
 #' @param delay (default is 0)
 #' @param maxurls Maximum urls returned in a "related" search (default is 10)
 #' @param max_depth Maximum depth a "linked" search will scrape
@@ -25,14 +25,19 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
   
   options(stringsAsFactors=F)
   #requireNamespace("dplyr");requireNamespace(magrittr);
-  if( excludesites != "none" )
+  if( jsonlite::validate(excludesites) ){
     excludesites <- jsonlite::fromJSON(excludesites)
-  sites <- jsonlite::fromJSON(sites)
+  }
+
+  if( jsonlite::validate(sites) ){
+    sites <- jsonlite::fromJSON(sites)
+  }
   sites <- unlist(lapply(sites,function(site){if(!grepl("^http",site)) {paste0("http://",site)}else{site}}))
 
   # loop through sites  
   network <- NULL
   for(site in sites){ # site = sites[1]
+    cat(site,"\n")
     if( searchtype == "related" ){
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
@@ -46,7 +51,6 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
         dplyr::bind_rows(results$nodes)
       network$edges %<>%
         dplyr::bind_rows(results$edges)
-      
     }else{
       network <- results
     }

@@ -114,7 +114,6 @@ linked_urls.session <- function(x, delay = delay, max_depth = max_depth, exclude
                                        depth = current_depth)
                        )
     }
-
     current_depth <- current_depth + 1L
   }
 
