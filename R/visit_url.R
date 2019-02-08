@@ -3,6 +3,7 @@
 #' Visit a Url and report social network analysis relevent details.
 #'
 #' @param x a url, specificied as a character string, or a html session
+#' @param time_out time in seconds to set the timeout on how long to wait for a site to respond
 #' @param ... not currently used.
 #'
 #' @return A \code{sna_visited_url} object.  This is a \code{data.frame} with
@@ -16,12 +17,12 @@
 #' }
 #'
 #' @export
-visit_url <- function(x, ...) {
+visit_url <- function(x, time_out=10, ...) {
   UseMethod("visit_url")
 }
 
 #' @export
-visit_url.session <- function(x, ...) {
+visit_url.session <- function(x, time_out=10, ...) {
   # visit_url(x$url, ...)
   
   out <-
@@ -30,7 +31,11 @@ visit_url.session <- function(x, ...) {
                       access_date = x$response$date,
                       type        = x$response$headers$`content-type`)
 
-  title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% gsub('\\"','', .), silent = TRUE)
+  title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% 
+                 gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% 
+                 gsub('\\"','', .) %>% 
+                 gsub('[^ -~]|[\x80-\xFF]|[^[:alnum:][:blank:]?&/\\-]','',.) %>% gsub("U00..",'',.)
+            , silent = TRUE)
   out$title <- ifelse(inherits(title, "try-error"),  urltools::domain(out$url), title)
   # out$title <- ifelse(inherits(title, "try-error"), NA_character_, title)
   # if(!(nchar(out$title)>0)) out$title <- urltools::domain(out$url)
@@ -41,13 +46,13 @@ visit_url.session <- function(x, ...) {
 }
 
 #' @export
-visit_url.character <- function(x, ...) {
+visit_url.character <- function(x, time_out=10, ...) {
 
   if (length(x) > 1L) {
     stop("length(x) > 1: you may only pass on url at a time to snaWeb::visit_url()", call. = FALSE)
   }
 
-  this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(10))),
+  this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(time_out))),
                       silent = TRUE)
 
   if (inherits(this_session, "try-error")) {

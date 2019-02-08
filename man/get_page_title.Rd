@@ -9,9 +9,9 @@ get_page_title(site, timeout = 10, onTimeout = "error")
 \arguments{
 \item{site}{url as a character string, or a html session.}
 
-\item{onTimeout}{A character specifying what action to take if a timeout event occurs}
+\item{timeout}{A numeric specifying the maximum number of seconds the expression is allowed to run before being interrupted by the timeout.}
 
-\item{A}{numeric specifying the maximum number of seconds the expression is allowed to run before being interrupted by the timeout.}
+\item{onTimeout}{A character specifying what action to take if a timeout event occurs}
 }
 \description{
 Get a page title

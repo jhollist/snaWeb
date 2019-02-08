@@ -12,7 +12,8 @@
 #' @param delay (default is 0)
 #' @param maxurls Maximum urls returned in a "related" search (default is 10)
 #' @param max_depth Maximum depth a "linked" search will scrape
-#'
+#' @param time_out time in seconds to set the timeout on how long to wait for a site to respond
+#' 
 #' @return What does this return?
 #'
 #' @examples \dontrun{
@@ -21,7 +22,7 @@
 #' @export
 buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE,
                          nodes = NULL, edges = NULL,
-                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5) { 
+                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=10) { 
   
   options(stringsAsFactors=F)
   #requireNamespace("dplyr");requireNamespace(magrittr);
@@ -42,7 +43,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
     }else{
-      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites))
+      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,,time_out=time_out))
       if(inherits(results,"try-error")) return( paste("Linked Error: site",site,"excludesites",jsonlite::toJSON(excludesites),results) )
     }
     # update the network with the latest site's results

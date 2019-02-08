@@ -13,21 +13,22 @@
 #' @param x The root url as a character string, or a html session.
 #' @param delay number of seconds to delay between http requests.
 #' @param max_depth Starting with the root url (level 0) follow links upto \code{max_depth} "clicks".
-#' @param excludesites (default is "none"
+#' @param excludesites (default is "none")
+#' @param time_out time in seconds to set the timeout on how long to wait for a site to respond
 #' @param ... additional arguments (not yet used)
 #'
 #' @export
-linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) {
+linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) {
   UseMethod("linked_urls")
 }
 #' @export
-linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   requireNamespace("magrittr")
   if( grep("\\.",x)==1 & !grepl("www",x) ){
     x <- gsub("://","://www.",x)
   }
   cl <- as.list(match.call())[-1]
-  cl$x <- try( rvest::html_session(x,httr::timeout(5)), silent = TRUE )
+  cl$x <- try( rvest::html_session(x,httr::timeout(time_out)), silent = TRUE )
   if( inherits(cl$x,"try-error") ) {
     out <-
       list(nodes      = data.frame(url=x,
@@ -42,12 +43,12 @@ linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="n
     class(out) <- c("sna_linked_urls", "sna_urls")
     return(out)
   }else{
-    do.call(linked_urls, cl)
+    do.call(linked_urls, cl,...)
   }
 }
 
 #' @export
-linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", ...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
   requireNamespace("magrittr")
   max_depth <- floor(max_depth)
@@ -59,13 +60,13 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   root_url <- x$url
   root_domain <- urltools::domain(root_url)
 
-  all_urls <- visit_url(root_url)
+  all_urls <- visit_url(root_url,time_out=time_out)
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
 
-  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url, omit_regex = "^mailto|pdf$|jpg$")))
+  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url, omit_regex = "^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")))
   all_urls$depth <- 0L
-
+  
   current_depth <- 1L
 
   cat("max_depth:", max_depth,"\n")
@@ -93,13 +94,13 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
     v_urls <-
       pbapply::pblapply(seq_along(links_to_visit$url),
-        function(i) {
+        function(i) { # i = 1
           u <- links_to_visit$url[i]
           r <- links_to_visit$relative[i]
           cat("\n     ---",u)
-          v <- try(visit_url(u))  ## Add error handle here?  Other regex to omit from get_href?
+          v <- try(visit_url(u, time_out=time_out))  ## Add error handle here?  Other regex to omit from get_href?
           if (r && v$status == 200) {
-            v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = "^mailto|pdf$|jpg$"))
+            v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = "^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$"))
           }
           cat(" success\n")
           Sys.sleep(delay)
@@ -130,8 +131,15 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     ) 
     # %>% dplyr::mutate(id = seq_along(.data$url))
   
+#  Error in bind_rows_(x, .id) : Argument 1 must have names [1] "Linked Error: site http://www.ny4p.org excludesites [\"none\"] Error in bind_rows_(x, .id) : Argument 1 must have names\n  
+  
+  #if(inherits(try(nchar(nodes$name)),"try-error")) browser()
+  # gsub('[^ -~]', [\x80-\xFF]   [^[:alnum:][:blank:]?&/\\-] then "U00.."
+  
   nodes$name[is.na(nodes$name)] <- nodes$rooturl[is.na(nodes$name)]
-  nodes$name[nchar(nodes$name)==0] <- nodes$rooturl[nchar(nodes$name)==0]
+  if( !inherits(try(nchar(nodes$name)),"try-error") ){
+    nodes$name[nchar(nodes$name)==0] <- nodes$rooturl[nchar(nodes$name)==0]
+  }
   nodes$name <- gsub("http://|https://","",nodes$name)
   
   nodes$specification <-
