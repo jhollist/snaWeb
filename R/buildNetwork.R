@@ -43,7 +43,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
     }else{
-      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,,time_out=time_out))
+      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,time_out=time_out))
       if(inherits(results,"try-error")) return( paste("Linked Error: site",site,"excludesites",jsonlite::toJSON(excludesites),results) )
     }
     # update the network with the latest site's results
