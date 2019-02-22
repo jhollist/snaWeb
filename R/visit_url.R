@@ -24,12 +24,15 @@ visit_url <- function(x, time_out=10, ...) {
 #' @export
 visit_url.session <- function(x, time_out=10, ...) {
   # visit_url(x$url, ...)
+
+  content_type <- x$response$headers$`content-type`
+  if(is.null(content_type)) content_type <- "unknown"
   
   out <-
     dplyr::data_frame(url         = x$url,
                       status      = as.character(x$response$status_code),
                       access_date = x$response$date,
-                      type        = x$response$headers$`content-type`)
+                      type        = content_type)
 
   title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% 
                  gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% 
@@ -68,7 +71,7 @@ visit_url.character <- function(x, time_out=10, ...) {
   } else {
     cl <- as.list(match.call())[-1]
     cl$x <- this_session
-    out <- do.call(visit_url, cl) 
+    out <- do.call(visit_url, cl, ...) 
   }
 
   out

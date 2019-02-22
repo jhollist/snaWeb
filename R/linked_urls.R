@@ -24,6 +24,7 @@ linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time
 #' @export
 linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   requireNamespace("magrittr")
+  
   if( grep("\\.",x)==1 & !grepl("www",x) ){
     x <- gsub("://","://www.",x)
   }
