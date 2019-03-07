@@ -20,8 +20,11 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
       rvest::html_nodes("title") %>%
       rvest::html_text() %>%
       magrittr::extract(1) %>%
-      gsub("\\'|\\t|\\r|\\n|\\s{2,}", "", .) %>%
-      gsub('\\"','', .)
+      gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% 
+      gsub('\\"','', .) %>% 
+      gsub(',',' ', .) %>% 
+      gsub('\\',' ', .,fixed=TRUE) %>% 
+      gsub('[^ -~]|[\x80-\xFF]|[^[:alnum:][:blank:]?&/\\-]','',.) %>% gsub("U00..",'',.)
   } else {
     pg_title <- site
   }

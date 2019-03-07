@@ -37,7 +37,10 @@ visit_url.session <- function(x, time_out=10, ...) {
   title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% 
                  gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% 
                  gsub('\\"','', .) %>% 
+                 gsub(',',' ', .) %>% 
+                 gsub('\\',' ', .,fixed=TRUE) %>% 
                  gsub('[^ -~]|[\x80-\xFF]|[^[:alnum:][:blank:]?&/\\-]','',.) %>% gsub("U00..",'',.)
+               
             , silent = TRUE)
   out$title <- ifelse(inherits(title, "try-error"),  urltools::domain(out$url), title)
   # out$title <- ifelse(inherits(title, "try-error"), NA_character_, title)

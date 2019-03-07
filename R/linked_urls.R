@@ -60,12 +60,16 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
   root_url <- x$url
   root_domain <- urltools::domain(root_url)
-
+  
+  omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
+  
   all_urls <- visit_url(root_url,time_out=time_out)
+  #all_urls <- visit_url(root_url,time_out=time_out)
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
 
-  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url, omit_regex = "^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")))
+  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url,omit_regex=omit_regex )))
+
   all_urls$depth <- 0L
   
   current_depth <- 1L
@@ -101,7 +105,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
           cat("\n     ---",u)
           v <- try(visit_url(u, time_out=time_out))  ## Add error handle here?  Other regex to omit from get_href?
           if (r && v$status == 200) {
-            v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = "^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$"))
+            v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = omit_regex))
           }
           cat(" success\n")
           Sys.sleep(delay)
