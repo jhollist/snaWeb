@@ -61,14 +61,15 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   root_url <- x$url
   root_domain <- urltools::domain(root_url)
   
-  omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
+  omit_regex <- paste0(paste(excludesites,collapse="|"),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$|mp4$|mov$|avi$|flv$|wmv$")
+  # omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
   
   all_urls <- visit_url(root_url,time_out=time_out)
   #all_urls <- visit_url(root_url,time_out=time_out)
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
 
-  all_urls %<>% dplyr::mutate(hrefs = list(snaWeb::get_hrefs(url,omit_regex=omit_regex )))
+  all_urls %<>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
 
   all_urls$depth <- 0L
   
@@ -81,11 +82,13 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
     links_to_visit <-
       all_urls %>%
+      dplyr::filter(grepl("text",.data$type)) %>%
       dplyr::filter(.data$depth == current_depth - 1L) %>%
       magrittr::extract2("hrefs") %>%
       dplyr::bind_rows(.) %>%
-      dplyr::distinct(.)
-
+      dplyr::distinct(.) %>% 
+      dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) ) & grepl(root_domain,.data$url)) )
+    
     message(sprintf("%d urls to visit", nrow(links_to_visit)))
     if (nrow(links_to_visit) > 0) {
       links_to_visit %<>% dplyr::anti_join(., all_urls, by = "url")
@@ -126,7 +129,11 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
   linked_sites <- all_urls %>% 
     dplyr::mutate(rooturl=urltools::domain(url)) %>% 
-    dplyr::filter(!internal & status == "200" & !duplicated(rooturl) & !grepl(paste0(excludesites,collapse="|"),rooturl))
+    dplyr::filter(!internal & 
+                    status == "200" & 
+                    !duplicated(rooturl) & 
+                    grepl("text",type) &
+                    !grepl(paste0(excludesites,collapse="|"),rooturl))
 
   nodes <-
     dplyr::data_frame(url = c(x$url, linked_sites$url),
