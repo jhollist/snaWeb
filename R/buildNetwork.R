@@ -22,7 +22,7 @@
 #' @export
 buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE,
                          nodes = NULL, edges = NULL,
-                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=10) { 
+                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=100) { 
   
   options(stringsAsFactors=F)
   #requireNamespace("dplyr");requireNamespace(magrittr);
