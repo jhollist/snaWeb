@@ -68,6 +68,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   #all_urls <- visit_url(root_url,time_out=time_out)
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
+  # all_urls$internal <- grepl(root_url, urltools::domain(all_urls$url))
 
   all_urls %<>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
 
@@ -87,7 +88,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
       magrittr::extract2("hrefs") %>%
       dplyr::bind_rows(.) %>%
       dplyr::distinct(.) %>% 
-      dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) ) & grepl(root_domain,.data$url)) )
+      dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) )) )  #& grepl(root_domain,.data$url)) )
     
     message(sprintf("%d urls to visit", nrow(links_to_visit)))
     if (nrow(links_to_visit) > 0) {
@@ -193,7 +194,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
          is_blocked = FALSE)      # Hold over form older version... 
   
 
-  class(out) <- c("sna_linked_urls", "sna_urls")
+  # class(out) <- c("sna_linked_urls", "sna_urls")
   
   return(out)
 }

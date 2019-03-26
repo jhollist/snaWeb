@@ -146,7 +146,7 @@ related_urls.character <- function(x, maxurls = 10L, delay = 2, excludesites=NUL
          edges      = edges,
          message    = "Success",  # Hold over form older version... 
          is_blocked = FALSE)      # Hold over form older version... 
-  class(out) <- c("sna_related_urls", "sna_urls")
+  # class(out) <- c("sna_related_urls", "sna_urls")
   out
 }
 
