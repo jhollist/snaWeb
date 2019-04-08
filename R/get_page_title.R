@@ -12,10 +12,9 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
   pg <- R.utils::withTimeout(try(xml2::read_html(site), silent = TRUE),
                              timeout = timeout, onTimeout = onTimeout)
   
-  if(grepl("questia",site)) browser()
-  
   if (!inherits(pg, "try-error")) {
-    pg_title <-
+
+    try(pg_title <-
       pg %>%
       rvest::html_nodes("title") %>%
       rvest::html_text() %>%
@@ -24,7 +23,10 @@ get_page_title <- function(site, timeout = 10, onTimeout = "error") {
       gsub('\\"','', .) %>% 
       gsub(',',' ', .) %>% 
       gsub('\\',' ', .,fixed=TRUE) %>% 
-      gsub('[^ -~]|[\x80-\xFF]|[^[:alnum:][:blank:]?&/\\-]','',.) %>% gsub("U00..",'',.)
+      gsub('[^ -~]|[\x80-\xFF]|[^[:alnum:][:blank:]?&/\\-]','',.) %>% gsub("U00..",'',.))
+    
+    if(inherits(pg_title,"try-error")) pg_title = site
+    
   } else {
     pg_title <- site
   }

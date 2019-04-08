@@ -18,11 +18,11 @@
 #' @param ... additional arguments (not yet used)
 #'
 #' @export
-linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) {
+linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, ...) {
   UseMethod("linked_urls")
 }
 #' @export
-linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   requireNamespace("magrittr")
   
   if( grep("\\.",x)==1 & !grepl("www",x) ){
@@ -49,7 +49,7 @@ linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="n
 }
 
 #' @export
-linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, ...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
   requireNamespace("magrittr")
   max_depth <- floor(max_depth)
@@ -58,7 +58,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     max_depth <- 1L
   }
 
-  root_url <- x$url
+  root_url <- gsub("/$","",x$url)
   root_domain <- urltools::domain(root_url)
   
   omit_regex <- paste0(paste(excludesites,collapse="|"),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$|mp4$|mov$|avi$|flv$|wmv$")
@@ -76,18 +76,19 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   
   current_depth <- 1L
 
-  cat("max_depth:", max_depth,"\n")
+  cat("max_depth:", max_depth," root_url: ",root_url," root_url:" ,root_url,"\n")
   while (current_depth <= max_depth) {
 
     message(sprintf("current_depth: %d", current_depth))
-
+    
     links_to_visit <-
       all_urls %>%
+      # dplyr::filter((root_url==.data$url)) %>%
       dplyr::filter(grepl("text",.data$type)) %>%
       dplyr::filter(.data$depth == current_depth - 1L) %>%
       magrittr::extract2("hrefs") %>%
       dplyr::bind_rows(.) %>%
-      dplyr::distinct(.) %>% 
+      dplyr::distinct(.)  %>% 
       dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) )) )  #& grepl(root_domain,.data$url)) )
     
     message(sprintf("%d urls to visit", nrow(links_to_visit)))
@@ -110,8 +111,20 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
           v <- try(visit_url(u, time_out=time_out))  ## Add error handle here?  Other regex to omit from get_href?
           if (r && v$status == 200) {
             v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = omit_regex))
+            cat("  success")
           }
-          cat(" success\n")
+          cat("  \n")
+          
+          # if( inherits(v, "try-error") ){
+          #   if (r && v$status == 200) {
+          #     v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = omit_regex))
+          #     cat(" success\n")
+          #   }else{
+          #     cat(" fail\n")
+          #   }
+          # }else{
+          #   cat(" fail\n")
+          # }
           Sys.sleep(delay)
           v
         }) %>%
@@ -129,21 +142,34 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   }
 
   linked_sites <- all_urls %>% 
+    dplyr::mutate(id=seq_along(.data$url)+(.data$depth*10)) %>% 
     dplyr::mutate(rooturl=urltools::domain(url)) %>% 
-    dplyr::filter(!internal & 
+    dplyr::filter((!internal | keep_internal | depth==0) &
                     status == "200" & 
-                    !duplicated(rooturl) & 
+                    !duplicated(url) & 
+                    # !duplicated(rooturl) & 
                     grepl("text",type) &
                     !grepl(paste0(excludesites,collapse="|"),rooturl))
-
   nodes <-
-    dplyr::data_frame(url = c(x$url, linked_sites$url),
-                      rooturl = c(root_domain,linked_sites$rooturl),
-                      name = c(snaWeb::get_page_title(x$url),linked_sites$title),
-                      is_root = c("TRUE", rep("FALSE", nrow(linked_sites)))
-    ) 
+    dplyr::data_frame(
+      id = linked_sites$id,
+      url = linked_sites$url,
+      rooturl = linked_sites$rooturl,
+      name = linked_sites$title,
+      is_root = linked_sites$depth==0
+  )
+  # nodes <-
+  #   dplyr::data_frame(
+  #     id = c(1,linked_sites$id),
+  #     url = c(root_url, linked_sites$url),
+  #     # url = c(x$url, linked_sites$url),
+  #     rooturl = c(root_domain,linked_sites$rooturl),
+  #     name = c(snaWeb::get_page_title(root_url,timeout=time_out),linked_sites$title),
+  #     # name = c(snaWeb::get_page_title(x$url,timeout=time_out),linked_sites$title),
+  #     is_root = c("TRUE", rep("FALSE", nrow(linked_sites)))
+  #   ) 
     # %>% dplyr::mutate(id = seq_along(.data$url))
-  
+
 #  Error in bind_rows_(x, .id) : Argument 1 must have names [1] "Linked Error: site http://www.ny4p.org excludesites [\"none\"] Error in bind_rows_(x, .id) : Argument 1 must have names\n  
   
   #if(inherits(try(nchar(nodes$name)),"try-error")) browser()
@@ -176,10 +202,20 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   #   with(edges, sprintf('{"predicate":"is related","rank":"%d"}', rank))
 
   if( length(linked_sites$rooturl) > 0 ) {
-    edges <-
-      dplyr::data_frame(name_from = root_domain,
-                        name_to   = linked_sites$rooturl)
-  
+    edges <- 
+      dplyr::data_frame(name_from = rep(nodes$url[nodes$is_root],nrow(linked_sites)-1),
+                        name_to   = nodes$url[!nodes$is_root],
+                        node_from = rep(nodes$id[nodes$is_root],nrow(linked_sites)-1),
+                        node_to   = nodes$id[!nodes$is_root]
+                        )
+    
+    
+    
+      # dplyr::data_frame(name_from = root_url,
+      #                   name_to   = linked_sites$url)
+    # dplyr::data_frame(name_from = root_domain,
+    #                   name_to   = linked_sites$rooturl)
+    
     edges$predicate <-
       with(edges, sprintf('{"predicate":"is linked","rank":"NA"}'))
   

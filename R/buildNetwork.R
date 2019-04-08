@@ -22,10 +22,11 @@
 #' @export
 buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE,
                          nodes = NULL, edges = NULL,
-                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=100) { 
+                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=100, keep_internal=FALSE) { 
   
   options(stringsAsFactors=F)
-  #requireNamespace("dplyr");requireNamespace(magrittr);
+  library("dplyr");library("magrittr");
+  # requireNamespace("dplyr");requireNamespace("magrittr");
   if( jsonlite::validate(excludesites) ){
     excludesites <- jsonlite::fromJSON(excludesites)
   }
@@ -43,7 +44,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
     }else{
-      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,time_out=time_out))
+      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,time_out=time_out,keep_internal=keep_internal))
       if(inherits(results,"try-error")) return( paste("Linked Error: site",site,"excludesites",jsonlite::toJSON(excludesites),results) )
     }
     # update the network with the latest site's results
@@ -84,18 +85,20 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
   }
 
   # Redo ids
-  network$nodes %<>% 
-    dplyr::filter(!duplicated(rooturl)) %>%
-    dplyr::mutate(id=seq_along(.data$url))
+  # if(!keep_internal)
+  #   network$nodes  <- network$nodes %>% 
+  #     dplyr::filter(!duplicated(rooturl))
+    
+  network$nodes <- network$nodes %>% dplyr::mutate(id=seq_along(.data$url))
 
   # Update node_from and node_to using new node ids
   if( !is.null( network$edges ) ){
-    
-    network$edges %<>%
+
+    network$edges <- network$edges %>%
       dplyr::select(dplyr::one_of("name_to","name_from","predicate")) %>%
-      dplyr::left_join(network$nodes[,c("id","rooturl")],by=c("name_to" = "rooturl")) %>% 
+      dplyr::left_join(network$nodes[,c("id","url")],by=c("name_to" = "url")) %>% 
       dplyr::rename(node_to=id) %>%
-      dplyr::left_join(network$nodes[,c("id","rooturl")],by=c("name_from" = "rooturl")) %>% 
+      dplyr::left_join(network$nodes[,c("id","url")],by=c("name_from" = "url")) %>% 
       dplyr::rename(node_from=id) %>%
       dplyr::mutate(id=seq_along(.data$name_from))
     
