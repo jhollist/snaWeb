@@ -13,6 +13,8 @@
 #' @param maxurls Maximum urls returned in a "related" search (default is 10)
 #' @param max_depth Maximum depth a "linked" search will scrape
 #' @param time_out time in seconds to set the timeout on how long to wait for a site to respond
+#' @param keep_internal a boolean indicating whether to keep all internal pages the site 
+#' @param keep_subpages a boolean indicating whether to keep all sub pages pages the site
 #' 
 #' @return What does this return?
 #'
@@ -22,7 +24,7 @@
 #' @export
 buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE,
                          nodes = NULL, edges = NULL,
-                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=100, keep_internal=FALSE) { 
+                         excludesites = "none", delay = 1, maxurls = 10, max_depth = 5,time_out=100, keep_internal=FALSE, keep_subpages=FALSE) { 
   
   options(stringsAsFactors=F)
   library("dplyr");library("magrittr");
@@ -44,7 +46,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       results <- try(related_urls(x=site,maxurls=maxurls,delay=delay, excludesites = excludesites))
       if(inherits(results,"try-error")) return( paste("Related Error:",results) )
     }else{
-      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,time_out=time_out,keep_internal=keep_internal))
+      results <- try(linked_urls(x=site,  delay = delay, max_depth = as.integer(max_depth), excludesites = excludesites,time_out=time_out,keep_internal=keep_internal,keep_subpages=keep_subpages))
       if(inherits(results,"try-error")) return( paste("Linked Error: site",site,"excludesites",jsonlite::toJSON(excludesites),results) )
     }
     # update the network with the latest site's results
@@ -57,7 +59,6 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       network <- results
     }
   }
-
   # Add the nodes and edges passsed in to the network
   if( !is.null(nodes) ){
     if( nchar(nodes) > 3 ){ # nchar > '[ ]'
@@ -65,16 +66,16 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       network$nodes %<>% dplyr::mutate(is_root=replace(is_root,is_root==TRUE,FALSE))
     
       nodes <- jsonlite::fromJSON(nodes,simplifyVector = TRUE)
-      nodes$specification <- unlist(lapply(1:nrow(nodes),function(i){paste0('{"',paste(names(nodes[i,"specification"]),nodes[i,"specification"],collapse = '","',sep='":"'),'"}')})) #jsonlite::toJSON(nodes[i,"specification"],auto_unbox=TRUE)}))
+      # nodes$specification <- unlist(lapply(1:nrow(nodes),function(i){paste0('{"',paste(names(nodes[i,"specification"]),nodes[i,"specification"],collapse = '","',sep='":"'),'"}')})) #jsonlite::toJSON(nodes[i,"specification"],auto_unbox=TRUE)}))
       nodes %<>% dplyr::mutate(rooturl=urltools::domain(url))
       edges <- jsonlite::fromJSON(edges)
-      edges$predicate <- unlist(lapply(1:nrow(edges),function(i){jsonlite::toJSON(edges[i,"predicate"],auto_unbox=TRUE)}))
-      edges %<>% 
-        dplyr::mutate(name_from=urltools::domain(name_from),name_to=urltools::domain(name_to))
-  
+      # edges$predicate <- unlist(lapply(1:nrow(edges),function(i){jsonlite::toJSON(edges[i,"predicate"],auto_unbox=TRUE)}))
+      # edges %<>% 
+      #   dplyr::mutate(name_from=urltools::domain(name_from),name_to=urltools::domain(name_to))
+ 
       network$nodes <-
         dplyr::bind_rows(nodes,network$nodes)
-    
+
       if( !is.null( network$edges ) ){
         network$edges <- 
           dplyr::bind_rows(edges,network$edges)
@@ -88,20 +89,28 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
   # if(!keep_internal)
   #   network$nodes  <- network$nodes %>% 
   #     dplyr::filter(!duplicated(rooturl))
-    
-  network$nodes <- network$nodes %>% dplyr::mutate(id=seq_along(.data$url))
+
+  network$nodes <- network$nodes %>% 
+    dplyr::mutate(id=seq_along(.data$url)) %>%
+    dplyr::mutate(tmp_id=gsub("http://|https://","",url))
 
   # Update node_from and node_to using new node ids
   if( !is.null( network$edges ) ){
 
     network$edges <- network$edges %>%
-      dplyr::select(dplyr::one_of("name_to","name_from","predicate")) %>%
-      dplyr::left_join(network$nodes[,c("id","url")],by=c("name_to" = "url")) %>% 
+      dplyr::mutate(tmp_to=gsub("http://|https://","",name_to)) %>%
+      dplyr::mutate(tmp_from=gsub("http://|https://","",name_from)) %>%
+      dplyr::select(dplyr::one_of("tmp_to","tmp_from","name_from","name_to","predicate")) %>%
+      dplyr::left_join(network$nodes[,c("id","tmp_id")],by=c("tmp_to" = "tmp_id")) %>% 
       dplyr::rename(node_to=id) %>%
-      dplyr::left_join(network$nodes[,c("id","url")],by=c("name_from" = "url")) %>% 
+      dplyr::left_join(network$nodes[,c("id","tmp_id")],by=c("tmp_from" = "tmp_id")) %>% 
       dplyr::rename(node_from=id) %>%
-      dplyr::mutate(id=seq_along(.data$name_from))
-    
+      dplyr::mutate(id=seq_along(.data$name_from)) %>%
+      dplyr::select(-one_of(c("tmp_to","tmp_from")))
+
+      network$nodes <- network$nodes %>% 
+        dplyr::select(-one_of(c("tmp_id")))    
+      
       # calculate network graph metrics
       network <- graphMetrics(network)
       

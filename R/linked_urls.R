@@ -15,14 +15,16 @@
 #' @param max_depth Starting with the root url (level 0) follow links upto \code{max_depth} "clicks".
 #' @param excludesites (default is "none")
 #' @param time_out time in seconds to set the timeout on how long to wait for a site to respond
+#' @param keep_internal a boolean indicating whether to keep all internal pages the site 
+#' @param keep_subpages a boolean indicating whether to keep all sub pages pages the site
 #' @param ... additional arguments (not yet used)
 #'
 #' @export
-linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, ...) {
+linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE, ...) {
   UseMethod("linked_urls")
 }
 #' @export
-linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   requireNamespace("magrittr")
   
   if( grep("\\.",x)==1 & !grepl("www",x) ){
@@ -49,7 +51,7 @@ linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="n
 }
 
 #' @export
-linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
+linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE,...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
   requireNamespace("magrittr")
   max_depth <- floor(max_depth)
@@ -68,6 +70,9 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   #all_urls <- visit_url(root_url,time_out=time_out)
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
+  all_urls$subpage  <- try(grepl(root_url, all_urls$url) & (root_url != all_urls$url))
+  if(inherits(all_urls$subpage,"try-error")) browser()
+  
   # all_urls$internal <- grepl(root_url, urltools::domain(all_urls$url))
 
   all_urls %<>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
@@ -135,6 +140,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
         dplyr::bind_rows(.,
                          dplyr::mutate(v_urls,
                                        internal = grepl(root_domain, urltools::domain(.data$url)),
+                                       subpage = grepl(root_url, .data$url) & (root_url != .data$url),
                                        depth = current_depth)
                        )
     }
@@ -145,11 +151,13 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     dplyr::mutate(id=seq_along(.data$url)+(.data$depth*10)) %>% 
     dplyr::mutate(rooturl=urltools::domain(url)) %>% 
     dplyr::filter((!internal | keep_internal | depth==0) &
-                    status == "200" & 
-                    !duplicated(url) & 
-                    # !duplicated(rooturl) & 
-                    grepl("text",type) &
-                    !grepl(paste0(excludesites,collapse="|"),rooturl))
+                  (!subpage | (keep_subpages & keep_internal)) &
+                  (status == "200") & 
+                  !duplicated(url) & 
+                  # !duplicated(rooturl) & 
+                  grepl("text",type) &
+                  !grepl(paste0(excludesites,collapse="|"),rooturl))
+  
   nodes <-
     dplyr::data_frame(
       id = linked_sites$id,

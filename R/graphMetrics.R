@@ -16,6 +16,7 @@ graphMetrics <- function(network) {
 
   gnodes <- network$nodes
   gedges <- network$edges
+
   gedges.igraph <- igraph::graph_from_data_frame(d=gedges[, c("node_from", "node_to")], vertices=as.character(gnodes$id)) 
 
   graphmetrics <- data.frame( id = names(igraph::V(gedges.igraph)),
