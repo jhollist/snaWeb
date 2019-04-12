@@ -59,6 +59,7 @@ buildNetwork <- function(sites = sites, searchtype = "related", snowball = FALSE
       network <- results
     }
   }
+  
   # Add the nodes and edges passsed in to the network
   if( !is.null(nodes) ){
     if( nchar(nodes) > 3 ){ # nchar > '[ ]'

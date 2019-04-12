@@ -235,7 +235,9 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     list(nodes      = nodes,
          edges      = edges,
          message    = "Success",  # Hold over form older version... 
-         is_blocked = FALSE)      # Hold over form older version... 
+         is_blocked = FALSE,      # Hold over form older version... 
+         depth = current_depth
+  )
   
 
   # class(out) <- c("sna_linked_urls", "sna_urls")
