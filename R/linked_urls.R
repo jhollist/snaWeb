@@ -163,7 +163,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
                   !grepl(paste0(excludesites,collapse="|"),rooturl))
   
   nodes <-
-    dplyr::data_frame(
+    dplyr::tibble(
       id = linked_sites$id,
       url = linked_sites$url,
       rooturl = linked_sites$rooturl,
@@ -215,7 +215,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
   if( length(linked_sites$rooturl) > 0 ) {
     edges <- 
-      dplyr::data_frame(name_from = rep(nodes$url[nodes$is_root],nrow(linked_sites)-1),
+      dplyr::tibble(name_from = rep(nodes$url[nodes$is_root],nrow(linked_sites)-1),
                         name_to   = nodes$url[!nodes$is_root],
                         node_from = rep(nodes$id[nodes$is_root],nrow(linked_sites)-1),
                         node_to   = nodes$id[!nodes$is_root]

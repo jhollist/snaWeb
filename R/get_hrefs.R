@@ -150,7 +150,7 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
 }
 
 bad_url_return <- function(s) {
-  out <- dplyr::data_frame(url = character(0), relative = logical(0))
+  out <- dplyr::tibble(url = character(0), relative = logical(0))
   attr(out, "session") <- s
   class(out) <- c("sna_hrefs", class(out))
   out
