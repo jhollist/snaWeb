@@ -117,10 +117,33 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
 
   # domain <- strsplit(parent_url, "/")[[1]][3]
   domain <- urltools::domain(parent_url)
+  
+  url_parsed <- urltools::url_parse(parent_url)
+  links_parsed <- urltools::url_parse(links)
+
+  url_parse <- unlist(strsplit(gsub("https://|http://","",parent_url),"/"))
+  links_parse <- strsplit(gsub("https://|http://","",links),"/")
+  
+  url_path   <- strsplit(url_parsed$path,"/")
+  links_path <- strsplit(links_parsed$path,"/")
+  url_path   <- unlist(lapply(url_path,function(frag){frag[!grepl("\\.",frag)]}))
+  links_path <- lapply(links_path,function(frag){frag[!grepl("\\.",frag)]})
+  
+  relative <- links_parsed$domain == url_parsed$domain
+  familytree <- lapply(links_path,function(link){link %in% url_path})
+  family     <- lapply(links_path,function(link){url_path %in% link})
+  child      <- unlist(lapply(family,function(fam){all(fam)}))
+  sibling    <- !child & unlist(lapply(familytree,function(fam){length(fam)==length(url_path) & all(fam[length(url_path)-1])}))
+  parent     <- !child & unlist(lapply(familytree,function(fam){length(fam)<length(url_path) & all(fam[length(url_path)-1])}))
 
   out <-
-    dplyr::data_frame(url = links,
-                      relative = grepl(domain, urltools::domain(links)))
+    dplyr::tibble(url = links,
+                  relative = relative,
+                  child = child,
+                  sibling = sibling,
+                  parent = parent
+  )
+  
   class(out) <- c("sna_hrefs", class(out))
   attr(out, "session") <- x
   out
@@ -132,3 +155,4 @@ bad_url_return <- function(s) {
   class(out) <- c("sna_hrefs", class(out))
   out
 }
+

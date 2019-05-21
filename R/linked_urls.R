@@ -26,8 +26,8 @@ linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time
 #' @export
 linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   requireNamespace("magrittr")
-  
-  if( grep("\\.",x)==1 & !grepl("www",x) ){
+
+  if( grep("\\.",x)==1 & !grepl("www",x) & length(unlist(strsplit(x,"\\.")))<3 ){
     x <- gsub("://","://www.",x)
   }
   cl <- as.list(match.call())[-1]
@@ -60,9 +60,9 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     max_depth <- 1L
   }
 
-  root_url <- gsub("/$","",x$url)
+  root_url    <- gsub("/$","",x$url)
   root_domain <- urltools::domain(root_url)
-  
+
   omit_regex <- paste0(paste(excludesites,collapse="|"),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$|mp4$|mov$|avi$|flv$|wmv$")
   # omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
   
@@ -71,21 +71,22 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
   all_urls$subpage  <- try(grepl(root_url, all_urls$url) & (root_url != all_urls$url))
+
   if(inherits(all_urls$subpage,"try-error")) browser()
   
   # all_urls$internal <- grepl(root_url, urltools::domain(all_urls$url))
 
-  all_urls %<>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
+  all_urls <- all_urls %>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
 
   all_urls$depth <- 0L
   
   current_depth <- 1L
-
+  
   cat("max_depth:", max_depth," root_url: ",root_url," root_url:" ,root_url,"\n")
   while (current_depth <= max_depth) {
 
     message(sprintf("current_depth: %d", current_depth))
-    
+
     links_to_visit <-
       all_urls %>%
       # dplyr::filter((root_url==.data$url)) %>%
@@ -93,8 +94,10 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
       dplyr::filter(.data$depth == current_depth - 1L) %>%
       magrittr::extract2("hrefs") %>%
       dplyr::bind_rows(.) %>%
-      dplyr::distinct(.)  %>% 
-      dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) )) )  #& grepl(root_domain,.data$url)) )
+      dplyr::distinct(.) %>%
+      dplyr::filter(!((root_domain == gsub("http://|https://","",.data$url) )) )
+    # dplyr::filter(!parent) %>% 
+      # dplyr::filter(!sibling)
     
     message(sprintf("%d urls to visit", nrow(links_to_visit)))
     if (nrow(links_to_visit) > 0) {
@@ -111,10 +114,11 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
       pbapply::pblapply(seq_along(links_to_visit$url),
         function(i) { # i = 1
           u <- links_to_visit$url[i]
-          r <- links_to_visit$relative[i]
+          r <- links_to_visit$relative[i] 
+          c <- links_to_visit$child[i] 
           cat("\n     ---",u)
           v <- try(visit_url(u, time_out=time_out))  ## Add error handle here?  Other regex to omit from get_href?
-          if (r && v$status == 200) {
+          if (c && v$status == 200) {
             v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = omit_regex))
             cat("  success")
           }
