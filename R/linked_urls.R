@@ -66,9 +66,10 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   omit_regex <- paste0(paste(excludesites,collapse="|"),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$|mp4$|mov$|avi$|flv$|wmv$")
   # omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
   
+  tictoc::tic()
   all_urls <- visit_url(root_url,time_out=time_out)
   #all_urls <- visit_url(root_url,time_out=time_out)
-
+  
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
   all_urls$subpage  <- try(grepl(root_url, all_urls$url) & (root_url != all_urls$url))
 
@@ -76,15 +77,21 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   
   # all_urls$internal <- grepl(root_url, urltools::domain(all_urls$url))
 
-  all_urls <- all_urls %>% dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex )))
+  all_urls <- all_urls %>% 
+    dplyr::mutate(hrefs = list(get_hrefs(url,omit_regex=omit_regex ))) %>%
+    dplyr::mutate(n_returns = unlist(lapply(hrefs,nrow)) )
 
+  scrape_time <- tictoc::toc()
+  all_urls$scrape_time <- scrape_time$toc-scrape_time$tic
+  
   all_urls$depth <- 0L
   
   current_depth <- 1L
   
   cat("max_depth:", max_depth," root_url: ",root_url," root_url:" ,root_url,"\n")
   while (current_depth <= max_depth) {
-
+    tictoc::tic()
+    
     message(sprintf("current_depth: %d", current_depth))
 
     links_to_visit <-
@@ -113,6 +120,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     v_urls <-
       pbapply::pblapply(seq_along(links_to_visit$url),
         function(i) { # i = 1
+          tictoc::tic()
           u <- links_to_visit$url[i]
           r <- links_to_visit$relative[i] 
           c <- links_to_visit$child[i] 
@@ -120,7 +128,15 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
           v <- try(visit_url(u, time_out=time_out))  ## Add error handle here?  Other regex to omit from get_href?
           if (c && v$status == 200) {
             v$hrefs <- list(snaWeb::get_hrefs(attr(v, "session"), omit_regex = omit_regex))
+            scrape_time <- tictoc::toc()
+            v$scrape_time <- scrape_time$toc-scrape_time$tic
+            v$depth <- current_depth
+            v$n_returns <- unlist(lapply(v$hrefs,nrow))
             cat("  success")
+          }else{
+            v$scrape_time <- NA
+            v$depth <- current_depth
+            v$n_returns <- 0
           }
           cat("  \n")
           
@@ -144,16 +160,22 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
         dplyr::bind_rows(.,
                          dplyr::mutate(v_urls,
                                        internal = grepl(root_domain, urltools::domain(.data$url)),
-                                       subpage = grepl(root_url, .data$url) & (root_url != .data$url),
-                                       depth = current_depth)
+                                       subpage = grepl(root_url, .data$url) & (root_url != .data$url)
+                                       # depth = .data$depth,
+                                       # scrape_time = .data$
+                                       # n_returns = length(.data$hrefs)
+                         )
+                                       # n_returns = ifelse(is.na(nrow(v_urls)),0,nrow(v_urls)))
                        )
     }
+
     current_depth <- current_depth + 1L
   }
 
   linked_sites <- all_urls %>% 
     dplyr::mutate(id=seq_along(.data$url)+(.data$depth*10)) %>% 
     dplyr::mutate(rooturl=urltools::domain(url)) %>% 
+    # dplyr::mutate(tictoc_log=unlist(tictoc_log)) %>% 
     dplyr::filter((!internal | keep_internal | depth==0) &
                   (!subpage | (keep_subpages & keep_internal)) &
                   (status == "200") & 
@@ -213,7 +235,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   # edges$predicate <-
   #   with(edges, sprintf('{"predicate":"is related","rank":"%d"}', rank))
 
-  if( length(linked_sites$rooturl) > 0 ) {
+  if( length(linked_sites$rooturl) > 0 & nrow(nodes) > 1 ) {
     edges <- 
       dplyr::tibble(name_from = rep(nodes$url[nodes$is_root],nrow(linked_sites)-1),
                         name_to   = nodes$url[!nodes$is_root],
@@ -235,12 +257,14 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
     edges <- NULL
   }
   # return object
-  out <-
+  
+out <-
     list(nodes      = nodes,
          edges      = edges,
-         message    = "Success",  # Hold over form older version... 
-         is_blocked = FALSE,      # Hold over form older version... 
-         depth = current_depth
+         # message    = "Success",  # Hold over form older version... 
+         # is_blocked = FALSE,      # Hold over form older version... 
+         depth = current_depth,
+         build_history = all_urls
   )
   
 

@@ -87,6 +87,8 @@ get_hrefs.character <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bo
 get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bookmarks = TRUE, ...) {
   parent_url <- x$url
 
+  if( grep("sealwatch",parent_url) ) browser()
+  
   links <-
     parent_url %>%
     {
@@ -101,7 +103,18 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
     gsub("\\/$", "", .) %>%  # omit trailing backslashs so that "../contact" and "../contact/" will be the same
     stats::na.omit(.) %>%
     unique(.) 
-
+  
+  if(length(links) == 0) {
+    return(
+      tibble::tibble(url      = character(),
+                     relative = logical(),
+                     child    = logical(),
+                     sibling  = logical(),
+                     parent   = logical()
+      )
+    )
+  }
+    
   if (!is.null(keep_regex)) {
     links <- links[grepl(keep_regex, links)]
   }
@@ -118,10 +131,10 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
   # domain <- strsplit(parent_url, "/")[[1]][3]
   domain <- urltools::domain(parent_url)
   
-  url_parsed <- urltools::url_parse(parent_url)
+  url_parsed   <- urltools::url_parse(parent_url)
   links_parsed <- urltools::url_parse(links)
 
-  url_parse <- unlist(strsplit(gsub("https://|http://","",parent_url),"/"))
+  url_parse   <- unlist(strsplit(gsub("https://|http://","",parent_url),"/"))
   links_parse <- strsplit(gsub("https://|http://","",links),"/")
   
   url_path   <- strsplit(url_parsed$path,"/")
@@ -129,15 +142,20 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
   url_path   <- unlist(lapply(url_path,function(frag){frag[!grepl("\\.",frag)]}))
   links_path <- lapply(links_path,function(frag){frag[!grepl("\\.",frag)]})
   
-  relative <- links_parsed$domain == url_parsed$domain
-  familytree <- lapply(links_path,function(link){link %in% url_path})
-  family     <- lapply(links_path,function(link){url_path %in% link})
-  child      <- unlist(lapply(family,function(fam){all(fam)}))
-  sibling    <- !child & unlist(lapply(familytree,function(fam){length(fam)==length(url_path) & all(fam[length(url_path)-1])}))
-  parent     <- !child & unlist(lapply(familytree,function(fam){length(fam)<length(url_path) & all(fam[length(url_path)-1])}))
-
+  relative   <- try(links_parsed$domain == url_parsed$domain)
+  familytree <- try(lapply(links_path,function(link){link %in% url_path}))
+  family     <- try(lapply(links_path,function(link){url_path %in% link}))
+  child      <- try(unlist(lapply(family,function(fam){all(fam)})))
+  if(!inherits(child,"try-error")){
+    sibling    <- try(!child & unlist(lapply(familytree,function(fam){length(fam)==length(url_path) & all(fam[length(url_path)-1])})))
+    parent     <- try(!child & unlist(lapply(familytree,function(fam){length(fam)<length(url_path) & all(fam[length(url_path)-1])})))
+  }
+  
+  # if( inherits(relative,"try-error") | inherits(familytree,"try-error") | inherits(family,"try-error") | inherits(child,"try-error") |
+  #     inherits(sibling,"try-error") | inherits(parent,"try-error") ) browser()
+  
   out <-
-    dplyr::tibble(url = links,
+    tibble::tibble(url = links,
                   relative = relative,
                   child = child,
                   sibling = sibling,

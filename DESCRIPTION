@@ -2,12 +2,10 @@ Package: snaWeb
 Type: Package
 Title: Internet-based Social Network Analysis
 Description: Internet-based Social Network Analysis.
-Version: 0.9.999
+Version: 1.0.0
 Authors@R: c(
-    person("Kristen", "Hychka",   email = "who@where.org",            role = c("ctb")),
-    person("Betty",   "Kreakie",  email = "who@where.org",            role = c("ctb")),
-    person("Peter",   "DeWitt",   email = "pdewitt@neptuneinc.org",   role = c("aut")),
-    person("Tom",     "Stockton", email = "tstockton@neptuneinc.org", role = c("aut", "cre"))
+    person("Tom",     "Stockton", email = "tstockton@neptuneinc.org", role = c("aut", "cre")),
+    person("Peter",   "DeWitt",   email = "pdewitt@neptuneinc.org",   role = c("aut"))
     )
 License: GPL (>=2)
 Imports:
@@ -21,7 +19,8 @@ Imports:
     rvest,
     urltools,
     xml2,
-    httr
+    httr,
+    tictoc
 VignetteBuilder: knitr
 Suggests:
     BiocStyle,

@@ -32,6 +32,7 @@ visit_url.session <- function(x, time_out=10, ...) {
     dplyr::data_frame(url         = x$url,
                       status      = as.character(x$response$status_code),
                       access_date = x$response$date,
+                      access_time = x$response$access_time,
                       type        = content_type)
 
   title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% 
@@ -56,23 +57,28 @@ visit_url.character <- function(x, time_out=10, ...) {
   if (length(x) > 1L) {
     stop("length(x) > 1: you may only pass on url at a time to snaWeb::visit_url()", call. = FALSE)
   }
-
+  
+  tictoc::tic()
   this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(time_out))),
                       silent = TRUE)
-
+  access_time <- tictoc::toc()
+  # this_session$access_time <- access_time$toc-access_time$tic
+  
   if (inherits(this_session, "try-error")) {
     out <-
       dplyr::data_frame(url         = x,
                         status      = attr(this_session, "condition")$message,
                         access_date = as.POSIXct(as.POSIXlt(Sys.time(), tz = "GMT")),
+                        access_time = access_time$toc-access_time$tic,
                         type        = NA_character_,
                         title       = NA_character_)
     out$url %<>%  gsub("\\/$", "", .) # omit trailing backslashs so that "../contact" and "../contact/" will be the same
     attr(out, "session") <- this_session
-    class(out) <- c("sna_visited_url", class(out))
+    # class(out) <- c("sna_visited_url", class(out))
   } else {
     cl <- as.list(match.call())[-1]
     cl$x <- this_session
+    cl$x$response$access_time <- access_time$toc-access_time$tic
     out <- do.call(visit_url, cl, ...) 
   }
 
