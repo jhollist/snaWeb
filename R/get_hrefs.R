@@ -87,8 +87,6 @@ get_hrefs.character <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bo
 get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bookmarks = TRUE, ...) {
   parent_url <- x$url
 
-  if( grep("sealwatch",parent_url) ) browser()
-  
   links <-
     parent_url %>%
     {
