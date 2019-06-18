@@ -85,8 +85,8 @@ get_hrefs.character <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bo
 
 #' @export
 get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bookmarks = TRUE, ...) {
+  parent_url <- "https://gisdt.neptuneinc.org/bigagency/region1"
   parent_url <- x$url
-
   links <-
     parent_url %>%
     {
@@ -130,10 +130,33 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
   domain <- urltools::domain(parent_url)
   
   url_parsed   <- urltools::url_parse(parent_url)
+  url_parsed   <- url_parsed %>% mutate(path = ifelse(is.na(path),"",path))
   links_parsed <- urltools::url_parse(links)
-
-  url_parse   <- unlist(strsplit(gsub("https://|http://","",parent_url),"/"))
-  links_parse <- strsplit(gsub("https://|http://","",links),"/")
+  
+  # url_parse   <- unlist(strsplit(gsub("https://|http://","",parent_url),"/"))
+  # links_parse <- strsplit(gsub("https://|http://","",links),"/")
+  
+  links_parsed <- 
+    links_parsed %>% 
+    mutate(url=links) %>%
+    mutate(path = ifelse(is.na(path),"",path)) %>% 
+    mutate(me = (scheme == url_parsed$scheme) & (domain == url_parsed$domain) & (path == url_parsed$path)) %>% 
+    dplyr::mutate(relative = !me & domain == url_parsed$domain ) %>% 
+    dplyr::mutate(child    = !me & relative & (is.na(url_parsed$path) | grepl(url_parsed$path,path))) %>%
+    dplyr::mutate(sibling  = !me & relative & !grepl(url_parsed$path,path))
+    # dplyr::mutate(parent   = 
+    #   !me & !child &
+    #   unlist(lapply(strsplit(path,"\\/"),function(frag){
+    #     parent_path <- unlist(strsplit(url_parsed$path,"\\/"))
+    #     parent_path <- parent_path[!grepl("htm",parent_path)]
+    #     frag <- frag[!grepl("htm",frag)]
+    #     any(parent_path %in% frag)
+    #   })))
+  
+  class(links_parsed) <- c("sna_hrefs", class(links_parsed))
+  attr(links_parsed, "session") <- x
+  
+  return(links_parsed)
   
   url_path   <- strsplit(url_parsed$path,"/")
   links_path <- strsplit(links_parsed$path,"/")
@@ -171,4 +194,5 @@ bad_url_return <- function(s) {
   class(out) <- c("sna_hrefs", class(out))
   out
 }
+
 
