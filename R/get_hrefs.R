@@ -68,7 +68,7 @@ get_hrefs.character <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bo
   if (length(x) > 1L) {
     stop("length(x) > 1: you may only pass on url at a time to snaWeb::get_hrefs()", call. = FALSE)
   }
-
+  
   s <- try(suppressWarnings(rvest::html_session(x)), silent = TRUE)
 
   if (inherits(s, "try-error")) {
@@ -85,7 +85,7 @@ get_hrefs.character <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bo
 
 #' @export
 get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_bookmarks = TRUE, ...) {
-  parent_url <- "https://gisdt.neptuneinc.org/bigagency/region1"
+
   parent_url <- x$url
   links <-
     parent_url %>%
@@ -122,9 +122,9 @@ get_hrefs.session <- function(x, keep_regex = NULL, omit_regex = NULL, omit_book
   }
 
   # omit urls with a tag
-  if (omit_bookmarks) { 
-    links <- links[!grepl("#", links)]
-  }
+  # if (omit_bookmarks) { 
+  #   links <- links[!grepl("#", links)]
+  # }
 
   # domain <- strsplit(parent_url, "/")[[1]][3]
   domain <- urltools::domain(parent_url)

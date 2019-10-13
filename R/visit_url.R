@@ -34,7 +34,7 @@ visit_url.session <- function(x, time_out=10, ...) {
                       access_date = x$response$date,
                       access_time = x$response$access_time,
                       type        = content_type)
-
+# if(lgrep("beyond",out)) browser()
   title <- try(rvest::html_text(rvest::html_nodes(x, "title")) %>% 
                  gsub("\\'|\\r|\\n|\\s{2,}","", .) %>% 
                  gsub('\\"','', .) %>% 
@@ -57,7 +57,7 @@ visit_url.character <- function(x, time_out=10, ...) {
   if (length(x) > 1L) {
     stop("length(x) > 1: you may only pass on url at a time to snaWeb::visit_url()", call. = FALSE)
   }
-  
+# if(lgrep("beyond",out)) browser()  
   tictoc::tic()
   this_session <- try(suppressWarnings(rvest::html_session(x,httr::timeout(time_out))),
                       silent = TRUE)

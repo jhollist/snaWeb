@@ -25,7 +25,7 @@ linked_urls <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time
 }
 #' @export
 linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE, ...) { #delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
-  requireNamespace("magrittr")
+  library("dplyr");library("magrittr");
 
   if( grep("\\.",x)==1 & !grepl("www",x) & length(unlist(strsplit(x,"\\.")))<3 ){
     x <- gsub("://","://www.",x)
@@ -53,7 +53,7 @@ linked_urls.character <- function(x, delay = 0.2, max_depth = 5, excludesites="n
 #' @export
 linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="none", time_out=10, keep_internal=FALSE, keep_subpages=FALSE,...) { # delay = delay, max_depth = max_depth, excludesites = excludesites, ...) {
   # check that the max_depth is an integer valued and at least 1
-  requireNamespace("magrittr")
+  library("dplyr");library("magrittr");
   max_depth <- floor(max_depth)
   if (max_depth < 1L) {
     warning("max_depth is being set to 1.", call. = FALSE, immediate. = TRUE)
@@ -65,7 +65,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
   omit_regex <- paste0(paste(excludesites,collapse="|"),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$|mp4$|mov$|avi$|flv$|wmv$")
   # omit_regex <- paste0(paste(excludesites,collapse="|"),"|",gsub("www.","",root_domain),"|^mailto|pdf$|jpg$|png$|ppt$|pptx$|xls$|xlsx$|doc$|docx$")
-  
+
   tictoc::tic()
   all_urls <- visit_url(root_url,time_out=time_out)
   #all_urls <- visit_url(root_url,time_out=time_out)
@@ -154,7 +154,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
           v
         }) %>%
       dplyr::bind_rows()
-
+    
     if (nrow(v_urls)) {
       all_urls %<>%
         dplyr::bind_rows(.,
@@ -171,19 +171,19 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
 
     current_depth <- current_depth + 1L
   }
-
+  
   linked_sites <- all_urls %>% 
     dplyr::mutate(id=seq_along(.data$url)+(.data$depth*10)) %>% 
     dplyr::mutate(rooturl=urltools::domain(url)) %>% 
     # dplyr::mutate(tictoc_log=unlist(tictoc_log)) %>% 
     dplyr::filter((!internal | keep_internal | depth==0) &
                   (!subpage | (keep_subpages & keep_internal)) &
-                  (status == "200") & 
+                    (status != "404" ) &
+                  # (status == "200" | (!is.na(title) & title!=rooturl)) & 
                   !duplicated(url) & 
                   # !duplicated(rooturl) & 
                   grepl("text",type) &
                   !grepl(paste0(excludesites,collapse="|"),rooturl))
-  
   nodes <-
     dplyr::tibble(
       id = linked_sites$id,

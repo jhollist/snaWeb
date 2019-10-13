@@ -2,7 +2,7 @@ Package: snaWeb
 Type: Package
 Title: Internet-based Social Network Analysis
 Description: Internet-based Social Network Analysis.
-Version: 1.0.02
+Version: 1.0.03
 Authors@R: c(
     person("Tom",     "Stockton", email = "tstockton@neptuneinc.org", role = c("aut", "cre")),
     person("Peter",   "DeWitt",   email = "pdewitt@neptuneinc.org",   role = c("aut"))
