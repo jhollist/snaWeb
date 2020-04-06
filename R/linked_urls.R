@@ -73,7 +73,7 @@ linked_urls.session <- function(x, delay = 0.2, max_depth = 5, excludesites="non
   all_urls$internal <- grepl(root_domain, urltools::domain(all_urls$url))
   all_urls$subpage  <- try(grepl(root_url, all_urls$url) & (root_url != all_urls$url))
 
-  if(inherits(all_urls$subpage,"try-error")) browser()
+  #if(inherits(all_urls$subpage,"try-error")) browser()
   
   # all_urls$internal <- grepl(root_url, urltools::domain(all_urls$url))
 
